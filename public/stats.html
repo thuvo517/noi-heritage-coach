@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Nói metrics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .wrap { padding: 24px 20px 48px; }
+    h1 { font-weight: 800; font-size: 30px; margin: 0 0 16px; letter-spacing: -0.02em; }
+    h2 { font-size: 18px; margin: 28px 0 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    td, th { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); }
+    td:last-child, th:last-child { text-align: right; }
+    form { display: flex; gap: 8px; }
+    input { flex: 1; font: inherit; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+    .scroll { overflow-x: auto; }
+  </style>
+</head>
+<body>
+<main class="wrap" id="root">
+  <h1>Nói metrics</h1>
+  <form id="f">
+    <input id="key" type="password" placeholder="Stats key" aria-label="Stats key" autocomplete="off">
+    <button class="btn primary">Load</button>
+  </form>
+  <div id="out"></div>
+</main>
+<script>
+const out = document.getElementById("out");
+const labels = (k) => k.replace(/_pct$/, " (%)").replace(/_/g, " ");
+function table(obj) {
+  const rows = Object.entries(obj).filter(([, v]) => typeof v !== "object" || v === null)
+    .map(([k, v]) => `<tr><td>${labels(k)}</td><td>${v ?? "n/a"}</td></tr>`).join("");
+  return `<table>${rows}</table>`;
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const key = document.getElementById("key").value;
+  const res = await fetch("/api/stats", { headers: { Authorization: "Bearer " + key } });
+  const d = await res.json();
+  if (!res.ok) { out.innerHTML = `<p class="error">${esc(d.error)}</p>`; return; }
+  out.innerHTML = `
+    <h2>Users</h2>${table(d.users)}
+    <h2>Funnel</h2>${table(d.funnel)}
+    <h2>Second conversation within 7 days</h2>${table(d.second_scenario_within_7_days)}
+    <h2>Conversations</h2>${table(d.conversation)}${table(d.conversation.feedback_mix)}
+    <h2>Were corrections helpful?</h2>${table(d.ratings)}
+    <h2>By scenario</h2><div class="scroll"><table><tr><th>Scenario</th><th>Starts</th><th>Completions</th><th>Rate (%)</th></tr>
+      ${d.per_scenario.map((s) => `<tr><td>${esc(s.scenario)}</td><td>${s.starts}</td><td>${s.completions}</td><td>${s.completion_rate_pct ?? "n/a"}</td></tr>`).join("")}
+    </table></div>
+    <h2>Daily active users (last 14 days)</h2>
+    <table>${d.daily_active_users.map((x) => `<tr><td>${x.day}</td><td>${x.users}</td></tr>`).join("")}</table>`;
+});
+</script>
+</body>
+</html>

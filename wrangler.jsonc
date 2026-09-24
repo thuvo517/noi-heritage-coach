@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "noi-heritage-coach",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  // Static frontend in ./public. Anything that isn't a file (like /api/*) goes to the Worker.
+  "assets": { "directory": "./public" },
+  // Workers AI (Llama 3.3)
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "USER", "class_name": "UserDO" },
+      { "name": "STATS", "class_name": "StatsDO" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["UserDO", "StatsDO"] }
+  ],
+  "observability": { "enabled": true }
+}
